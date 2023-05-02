@@ -7,9 +7,9 @@ const ErrorHandler = require("../utils/ErrorHandler");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const sendMail = require("../utils/sendMail");
-const sendToken = require("../utils/jwtToken");
+const sendShopToken = require("../utils/shopToken");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
-const { isAuthenticated } = require("../middleware/auth");
+const { isSellerAuthenticated } = require("../middleware/auth");
 router.post("/create-shop", upload.single("file"), async (req, res, next) => {
   try {
     const {
@@ -94,7 +94,7 @@ router.post(
         return next(new ErrorHandler("Seller already registered", 400));
       }
       seller = await Shop.create(newSeller);
-      sendToken(seller, 201, res);
+      sendShopToken(seller, 201, res);
     } catch (error) {
       return next(new ErrorHandler(error, 400));
     }
@@ -118,7 +118,7 @@ router.post(
       if (!isPasswordValid) {
         return next(new ErrorHandler("credentials did not matched", 400));
       }
-      sendToken(seller, 201, res);
+      sendShopToken(seller, 201, res);
     } catch (error) {
       return next(new ErrorHandler(error, 400));
     }
@@ -129,10 +129,10 @@ router.post(
 
 router.get(
   "/get-seller",
-  isAuthenticated,
+  isSellerAuthenticated,
   catchAsyncErrors(async (req, res, next) => {
     try {
-      const seller = await Shop.findById(req.shop.id);
+      const seller = await Shop.findById(req.seller.id);
       if (!seller) {
         return next(new ErrorHandler("Seller does not exist", 400));
       }

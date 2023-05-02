@@ -24,9 +24,10 @@ if (process.env.NODE_ENV !== "PRODUCTION") {
 
 const user = require("./controller/user");
 const shop = require("./controller/shop");
-
+const product = require("./controller/product");
 app.use("/api/v1/user", user);
 app.use("/api/v1/shop", shop);
+app.use("/api/v1/product", product);
 
 // Its for error handling
 app.use(Error);
