@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const sendMail = require("../utils/sendMail");
 const sendShopToken = require("../utils/shopToken");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
-const { isSellerAuthenticated } = require("../middleware/auth");
+const { isSeller } = require("../middleware/auth");
 router.post("/create-shop", upload.single("file"), async (req, res, next) => {
   try {
     const {
@@ -129,7 +129,7 @@ router.post(
 
 router.get(
   "/get-seller",
-  isSellerAuthenticated,
+  isSeller,
   catchAsyncErrors(async (req, res, next) => {
     try {
       const seller = await Shop.findById(req.seller.id);
@@ -142,6 +142,42 @@ router.get(
       });
     } catch (error) {
       return next(new ErrorHandler(error, 400));
+    }
+  })
+);
+
+// logout from shop
+
+router.get(
+  "/logout",
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      res.cookie("sellerToken", null, {
+        expires: new Date(Date.now()),
+        httpOnly: true,
+      });
+      res
+        .status(200)
+        .json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+      return next(new ErrorHandler(error, 400));
+    }
+  })
+);
+
+// get shop info
+router.get(
+  "/get-shop-info/:id",
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const shopId = req.params.id;
+      const shop = await Shop.findById(shopId);
+      res.status(201).json({
+        success: true,
+        shop,
+      });
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500));
     }
   })
 );

@@ -10,6 +10,8 @@ const sendMail = require("../utils/sendMail");
 const sendToken = require("../utils/jwtToken");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const { isAuthenticated } = require("../middleware/auth");
+const user = require("../model/user");
+const multer = require("multer");
 router.post("/create-user", upload.single("file"), async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -134,4 +136,114 @@ router.get(
   })
 );
 
+router.get(
+  "/logout",
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      res.cookie("token", null, {
+        expires: new Date(Date.now()),
+        httpOnly: true,
+      });
+      res
+        .status(200)
+        .json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+      return next(new ErrorHandler(error, 400));
+    }
+  })
+);
+router.put(
+  "/update-user-info",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const { name, password, email, phoneNumber } = req.body;
+      const user = await User.findOne({ email }).select("password");
+      console;
+      if (!user) {
+        return next(new ErrorHandler("User does not registered", 400));
+      }
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        return next(
+          new ErrorHandler("Please provide correct information", 400)
+        );
+      }
+      const updatedUser = await User.findByIdAndUpdate(
+        user?.id,
+        { name, email, phoneNumber },
+        {
+          new: true,
+        }
+      );
+      // user.name = name;
+      // user.phoneNumber = phoneNumber;
+      // user.email = email;
+      // await user.save();
+      res.status(200).json({ success: true, user: updatedUser });
+    } catch (error) {
+      return next(new ErrorHandler(error, 400));
+    }
+  })
+);
+
+router.put(
+  "/update-avatar",
+  isAuthenticated,
+  upload.single("image"),
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const user = await User.findById(req.user?._id);
+      if (!user) {
+        return next(new ErrorHandler("User not found", 400));
+      }
+      const oldAvatar = `uploads/${user.avatar}`;
+      fs.unlinkSync(oldAvatar);
+      const filename = req.file.filename;
+      const fileUrl = path.join(filename);
+      const updatedUser = await User.findByIdAndUpdate(
+        user?._id,
+        { avatar: fileUrl },
+        { new: true }
+      );
+      res.status(200).json({ success: true, user: updatedUser });
+    } catch (error) {
+      return next(new ErrorHandler(error, 400));
+    }
+  })
+);
+
+router.put(
+  "/update-user-addresses",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const { country, city, address1, address2, zipCode, addressType } =
+        req.body;
+      const user = await User.findById(req.user?._id);
+      if (!user) {
+        return next(new ErrorHandler(error, 400));
+      }
+      const sameAddress = user.addresses.find(
+        (address) => address.addressType === addressType
+      );
+      if (sameAddress) {
+        return next(new ErrorHandler(`${addressType} is already added.`, 400));
+      }
+      const updatedUser = await User.findByIdAndUpdate(
+        user?._id,
+        {
+          addresses: [
+            ...user.addresses,
+            { country, city, address1, address2, zipCode, addressType },
+          ],
+        },
+        { new: true }
+      );
+      res.status(200).json({ success: true, user: updatedUser });
+    } catch (error) {
+      return next(new ErrorHandler(error, 400));
+    }
+  })
+);
 module.exports = router;
